@@ -6,15 +6,16 @@ using System.Threading.Tasks;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
 
-namespace canvsserverlist
+namespace canvsserverlist.src
 {
     public class HeartbeatSystem : IDisposable
     {
         private readonly ICoreServerAPI api;
-        private readonly ModConfig config;
+        private ModConfig config;
         private readonly ApiClient client;
         private Timer? timer;
         private int consecutiveFailures;
+        private int sending;
 
         public HeartbeatSystem(ICoreServerAPI api, ModConfig config, ApiClient client)
         {
@@ -50,6 +51,8 @@ namespace canvsserverlist
                 return;
             }
 
+            if (Interlocked.CompareExchange(ref sending, 1, 0) != 0) return;
+
             Task.Run(async () =>
             {
                 try
@@ -67,6 +70,10 @@ namespace canvsserverlist
                 catch (Exception ex)
                 {
                     OnFailure(ex.Message);
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref sending, 0);
                 }
             });
         }
@@ -87,6 +94,14 @@ namespace canvsserverlist
                 timer.Change(backoffMs, backoffMs);
                 api.Logger.Warning("[canvsserverlist] Heartbeat backing off to {0}s", backoffMs / 1000);
             }
+        }
+
+        public void Reconfigure(ModConfig newConfig)
+        {
+            config = newConfig;
+            consecutiveFailures = 0;
+            int intervalMs = newConfig.HeartbeatIntervalSeconds * 1000;
+            timer?.Change(intervalMs, intervalMs);
         }
 
         /// <summary>

@@ -5,12 +5,12 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
-namespace canvsserverlist
+namespace canvsserverlist.src
 {
     public class ApiClient : IDisposable
     {
         private readonly HttpClient http;
-        private readonly ModConfig config;
+        private ModConfig config;
 
         public ApiClient(ModConfig config)
         {
@@ -18,6 +18,13 @@ namespace canvsserverlist
             http = new HttpClient();
             http.Timeout = TimeSpan.FromSeconds(10);
             http.DefaultRequestHeaders.Add("X-Api-Key", config.ApiKey);
+        }
+
+        public void Reconfigure(ModConfig newConfig)
+        {
+            config = newConfig;
+            http.DefaultRequestHeaders.Remove("X-Api-Key");
+            http.DefaultRequestHeaders.Add("X-Api-Key", newConfig.ApiKey);
         }
 
         public async Task<bool> SendHeartbeat(int playerCount, List<string> playerNames)

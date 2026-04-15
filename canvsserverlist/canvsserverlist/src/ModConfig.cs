@@ -1,6 +1,6 @@
 using System;
 
-namespace canvsserverlist
+namespace canvsserverlist.src
 {
     public class ModConfig
     {
@@ -16,5 +16,17 @@ namespace canvsserverlist
     {
         public string ItemCode { get; set; } = "";
         public int Quantity { get; set; } = 1;
+
+        /// <summary>
+        /// Item attributes serialized as base64 string (e.g., durability, enchantments, etc.)
+        /// Can be null if no attributes are needed
+        /// </summary>
+        public string? Attributes { get; set; }
+
+        /// <summary>
+        /// Character class filter. If set, this reward is only given to players of this class.
+        /// If null, the reward is given to everyone.
+        /// </summary>
+        public string? Class { get; set; }
     }
 }

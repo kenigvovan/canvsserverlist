@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Vintagestory.API.Server;
 using Vintagestory.API.Util;
 
-namespace canvsserverlist
+namespace canvsserverlist.src
 {
     /// <summary>
     /// Thread-safe persistent queue for offline player rewards.
@@ -24,7 +24,8 @@ namespace canvsserverlist
             {
                 try
                 {
-                    queue = SerializerUtil.Deserialize<Dictionary<string, int>>(raw);
+                    var deserialized = SerializerUtil.Deserialize<Dictionary<string, int>>(raw);
+                    queue = new Dictionary<string, int>(deserialized, StringComparer.OrdinalIgnoreCase);
                 }
                 catch
                 {

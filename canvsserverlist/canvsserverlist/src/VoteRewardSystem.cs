@@ -1,21 +1,25 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
+using Vintagestory.API.Datastructures;
 using Vintagestory.API.Server;
 
-namespace canvsserverlist
+namespace canvsserverlist.src
 {
     public class VoteRewardSystem : IDisposable
     {
         private readonly ICoreServerAPI api;
-        private readonly ModConfig config;
+        private ModConfig config;
         private readonly ApiClient client;
         private RewardQueue queue = null!;
         private Timer? timer;
         private int consecutiveFailures;
+        private int polling;
 
         public VoteRewardSystem(ICoreServerAPI api, ModConfig config, ApiClient client)
         {
@@ -36,6 +40,17 @@ namespace canvsserverlist
                 .WithDescription("Claim your vote rewards")
                 .HandleWith(OnClaimCommand);
 
+            // Register /clearvoterewards command for admins
+            api.ChatCommands.Create("clearvoterewards").RequiresPrivilege(Privilege.controlserver)
+                .WithDescription("Clear all vote rewards")
+                .HandleWith(OnClearRewardsCommand);
+
+            // Register /addvotereward command for admins
+            api.ChatCommands.Create("addvotereward").RequiresPrivilege(Privilege.controlserver)
+                .WithDescription("Add item in hand as vote reward")
+                .WithArgs(api.ChatCommands.Parsers.Int("quantity"))
+                .HandleWith(OnAddRewardCommand);
+
             int intervalMs = config.VotePollIntervalSeconds * 1000;
             timer = new Timer(_ => PollVotes(), null, 5000, intervalMs);
         }
@@ -48,8 +63,18 @@ namespace canvsserverlist
 
         public RewardQueue Queue => queue;
 
+        public void Reconfigure(ModConfig newConfig)
+        {
+            config = newConfig;
+            consecutiveFailures = 0;
+            int intervalMs = newConfig.VotePollIntervalSeconds * 1000;
+            timer?.Change(intervalMs, intervalMs);
+        }
+
         private void PollVotes()
         {
+            if (Interlocked.CompareExchange(ref polling, 1, 0) != 0) return;
+
             Task.Run(async () =>
             {
                 try
@@ -121,6 +146,10 @@ namespace canvsserverlist
                         timer.Change(backoffMs, backoffMs);
                     }
                 }
+                finally
+                {
+                    Interlocked.Exchange(ref polling, 0);
+                }
             });
         }
 
@@ -156,13 +185,82 @@ namespace canvsserverlist
             return TextCommandResult.Success($"Claimed {count} vote reward(s)! Thank you for voting!");
         }
 
-        private void GiveReward(IServerPlayer player)
+        private TextCommandResult OnClearRewardsCommand(TextCommandCallingArgs args)
+        {
+            config.Rewards = Array.Empty<RewardItem>();
+            api.StoreModConfig(config, "canvsserverlist.json");
+            return TextCommandResult.Success("Vote rewards cleared and saved.");
+        }
+
+        private TextCommandResult OnAddRewardCommand(TextCommandCallingArgs args)
+        {
+            var player = args.Caller.Player as IServerPlayer;
+            if (player == null) return TextCommandResult.Error("Server-side only.");
+
+            var itemStack = player.InventoryManager.ActiveHotbarSlot?.Itemstack;
+            if (itemStack == null)
+            {
+                return TextCommandResult.Error("You must hold an item in your hand.");
+            }
+
+            int quantity = (int)args.Parsers[0].GetValue();
+            if (quantity <= 0)
+            {
+                return TextCommandResult.Error("Quantity must be greater than 0.");
+            }
+
+            string? attributesBase64 = null;
+            if (itemStack.Attributes?.Count > 0)
+            {
+                try
+                {
+                    using (var ms = new MemoryStream())
+                    using (var bw = new BinaryWriter(ms))
+                    {
+                        itemStack.Attributes.ToBytes(bw);
+                        byte[] attributeBytes = ms.ToArray();
+                        attributesBase64 = Convert.ToBase64String(attributeBytes);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    api.Logger.Warning("[canvsserverlist] Failed to serialize item attributes: {0}", ex.Message);
+                }
+            }
+
+            var newReward = new RewardItem
+            {
+                ItemCode = itemStack.Collectible.Code.ToString(),
+                Quantity = quantity,
+                Attributes = attributesBase64
+            };
+
+            var rewardsList = new List<RewardItem>(config.Rewards ?? Array.Empty<RewardItem>());
+            rewardsList.Add(newReward);
+            config.Rewards = rewardsList.ToArray();
+            api.StoreModConfig(config, "canvsserverlist.json");
+
+            return TextCommandResult.Success(
+                $"Added {quantity}x {itemStack.Collectible.Code} to vote rewards." +
+                (attributesBase64 != null ? " (with attributes)" : "")
+            );
+        }
+
+        public void GiveReward(IServerPlayer player)
         {
             if (config.Rewards == null || config.Rewards.Length == 0) return;
+
+            string playerClass = player.Entity?.WatchedAttributes?.GetString("characterClass") ?? "";
+            int givenCount = 0;
 
             foreach (var reward in config.Rewards)
             {
                 if (string.IsNullOrEmpty(reward.ItemCode)) continue;
+
+                // Skip rewards meant for a different class
+                if (!string.IsNullOrEmpty(reward.Class) &&
+                    !reward.Class.Equals(playerClass, StringComparison.OrdinalIgnoreCase))
+                    continue;
 
                 var assetLoc = new AssetLocation(reward.ItemCode);
 
@@ -181,17 +279,38 @@ namespace canvsserverlist
                 }
 
                 var itemStack = new ItemStack(collectible, reward.Quantity);
+
+                // Apply attributes if present
+                if (!string.IsNullOrEmpty(reward.Attributes))
+                {
+                    try
+                    {
+                        byte[] attributeBytes = Convert.FromBase64String(reward.Attributes);
+                        itemStack.Attributes = Vintagestory.API.Datastructures.TreeAttribute.CreateFromBytes(attributeBytes);
+                    }
+                    catch (Exception ex)
+                    {
+                        api.Logger.Warning("[canvsserverlist] Failed to deserialize attributes for reward '{0}': {1}",
+                            reward.ItemCode, ex.Message);
+                    }
+                }
+
                 if (!player.InventoryManager.TryGiveItemstack(itemStack))
                 {
                     api.World.SpawnItemEntity(itemStack, player.Entity.Pos.XYZ);
                 }
+
+                givenCount++;
             }
 
-            player.SendMessage(
-                GlobalConstants.GeneralChatGroup,
-                "Thank you for voting! Here's your reward.",
-                EnumChatType.Notification
-            );
+            if (givenCount > 0)
+            {
+                player.SendMessage(
+                    GlobalConstants.GeneralChatGroup,
+                    "Thank you for voting! Here's your reward.",
+                    EnumChatType.Notification
+                );
+            }
         }
     }
 }
