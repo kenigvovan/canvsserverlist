@@ -8,46 +8,67 @@ using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.Datastructures;
 using Vintagestory.API.Server;
+using Vintagestory.API.Util;
 
 namespace canvsserverlist.src
 {
     public class VoteRewardSystem : IDisposable
     {
+        private const string SeenVoteIdsKey = "canvsserverlist_seen_vote_ids";
+        private const int SeenVoteIdsMaxSize = 10_000;
+        private const int SeenVoteIdsTrimTo = 5_000;
+
         private readonly ICoreServerAPI api;
         private ModConfig config;
         private readonly ApiClient client;
+        private readonly object configLock;
         private RewardQueue queue = null!;
+        private HashSet<int> seenVoteIds = null!;
         private Timer? timer;
         private int consecutiveFailures;
         private int polling;
 
-        public VoteRewardSystem(ICoreServerAPI api, ModConfig config, ApiClient client)
+        public Action<ModConfig>? OnConfigChanged { get; set; }
+
+        public VoteRewardSystem(ICoreServerAPI api, ModConfig config, ApiClient client, object configLock)
         {
             this.api = api;
             this.config = config;
             this.client = client;
+            this.configLock = configLock;
         }
 
         public void Start()
         {
             queue = new RewardQueue(api);
 
+            var raw = api.WorldManager.SaveGame.GetData(SeenVoteIdsKey);
+            if (raw != null)
+            {
+                try { seenVoteIds = SerializerUtil.Deserialize<HashSet<int>>(raw); }
+                catch { seenVoteIds = new HashSet<int>(); }
+            }
+            else
+            {
+                seenVoteIds = new HashSet<int>();
+            }
+
             // Notify player on join if they have pending rewards
             api.Event.PlayerJoin += OnPlayerJoin;
 
             // Register /voteclaim command for players
             api.ChatCommands.Create("voteclaim").RequiresPrivilege(Privilege.chat)
-                .WithDescription("Claim your vote rewards")
+                .WithDescription(Lang.Get("canvsserverlist:cmd-voteclaim-desc"))
                 .HandleWith(OnClaimCommand);
 
             // Register /clearvoterewards command for admins
             api.ChatCommands.Create("clearvoterewards").RequiresPrivilege(Privilege.controlserver)
-                .WithDescription("Clear all vote rewards")
+                .WithDescription(Lang.Get("canvsserverlist:cmd-clearvoterewards-desc"))
                 .HandleWith(OnClearRewardsCommand);
 
             // Register /addvotereward command for admins
             api.ChatCommands.Create("addvotereward").RequiresPrivilege(Privilege.controlserver)
-                .WithDescription("Add item in hand as vote reward")
+                .WithDescription(Lang.Get("canvsserverlist:cmd-addvotereward-desc"))
                 .WithArgs(api.ChatCommands.Parsers.Int("quantity"))
                 .HandleWith(OnAddRewardCommand);
 
@@ -80,31 +101,52 @@ namespace canvsserverlist.src
                 try
                 {
                     var votes = await client.GetPendingVotes();
+
+                    consecutiveFailures = 0;
+                    if (timer != null)
+                    {
+                        int intervalMs = config.VotePollIntervalSeconds * 1000;
+                        timer.Change(intervalMs, intervalMs);
+                    }
+
                     if (votes.Count == 0) return;
+
+                    // Phase 1: filter out votes we have already enqueued (dedup guard).
+                    // seenVoteIds is persisted, so this survives restarts and ack failures.
+                    var newVotes = votes.Where(v => !seenVoteIds.Contains(v.Id)).ToList();
+
+                    // Phase 2: queue new votes to persistent storage.
+                    foreach (var vote in newVotes)
+                        queue.Enqueue(vote.IngameNickname);
+
+                    // Phase 3: mark new vote IDs as seen BEFORE acking.
+                    // If ack fails and backend returns the same IDs next poll, we skip them.
+                    foreach (var vote in newVotes)
+                        seenVoteIds.Add(vote.Id);
+
+                    if (seenVoteIds.Count > SeenVoteIdsMaxSize)
+                    {
+                        // Keep only the most recent IDs (largest values = newest votes).
+                        seenVoteIds = new HashSet<int>(
+                            seenVoteIds.OrderByDescending(id => id).Take(SeenVoteIdsTrimTo));
+                    }
+
+                    api.WorldManager.SaveGame.StoreData(
+                        SeenVoteIdsKey, SerializerUtil.Serialize(seenVoteIds));
+
+                    // Phase 4: ack ALL votes returned by backend (including already-seen),
+                    // so the backend stops returning them on future polls.
+                    var voteIds = votes.Select(v => v.Id).ToList();
+                    bool acked = await client.AckVotes(voteIds);
+                    if (!acked)
+                        api.Logger.Warning("[canvsserverlist] Vote ack failed, will retry next poll.");
 
                     // Build lookup of online players
                     var onlinePlayers = api.World.AllOnlinePlayers
                         .ToDictionary(p => p.PlayerName.ToLowerInvariant(), p => (IServerPlayer)p);
 
-                    // Phase 1: queue ALL votes (both online and offline) to persistent storage.
-                    // This guarantees no reward is lost even if the server crashes after ack.
-                    foreach (var vote in votes)
-                    {
-                        queue.Enqueue(vote.IngameNickname);
-                    }
-
-                    // Phase 2: ack to backend — safe now because rewards are persisted locally.
-                    var voteIds = votes.Select(v => v.Id).ToList();
-                    bool acked = await client.AckVotes(voteIds);
-                    if (!acked)
-                    {
-                        // Ack failed — votes will come again next poll.
-                        // Duplicates in queue are harmless (player gets extra reward at worst).
-                        api.Logger.Warning("[canvsserverlist] Vote ack failed, will retry next poll.");
-                    }
-
-                    // Phase 3: notify online players that they have rewards to claim.
-                    foreach (var vote in votes)
+                    // Phase 5: notify online players that they have rewards to claim.
+                    foreach (var vote in newVotes)
                     {
                         var key = vote.IngameNickname.ToLowerInvariant();
                         if (onlinePlayers.TryGetValue(key, out var player))
@@ -116,19 +158,12 @@ namespace canvsserverlist.src
                                 {
                                     player.SendMessage(
                                         GlobalConstants.GeneralChatGroup,
-                                        $"You have {pending} vote reward(s)! Type /voteclaim to collect.",
+                                        Lang.Get("canvsserverlist:notify-pending", pending),
                                         EnumChatType.Notification
                                     );
                                 }, "canvsserverlist_notify");
                             }
                         }
-                    }
-
-                    consecutiveFailures = 0;
-                    if (timer != null)
-                    {
-                        int intervalMs = config.VotePollIntervalSeconds * 1000;
-                        timer.Change(intervalMs, intervalMs);
                     }
                 }
                 catch (Exception ex)
@@ -160,7 +195,7 @@ namespace canvsserverlist.src
             {
                 player.SendMessage(
                     GlobalConstants.GeneralChatGroup,
-                    $"You have {pending} vote reward(s) waiting! Type /voteclaim to collect.",
+                    Lang.Get("canvsserverlist:notify-pending-join", pending),
                     EnumChatType.Notification
                 );
             }
@@ -169,12 +204,12 @@ namespace canvsserverlist.src
         private TextCommandResult OnClaimCommand(TextCommandCallingArgs args)
         {
             var player = args.Caller.Player as IServerPlayer;
-            if (player == null) return TextCommandResult.Error("Server-side only.");
+            if (player == null) return TextCommandResult.Error(Lang.Get("canvsserverlist:error-server-only"));
 
             int count = queue.Dequeue(player.PlayerName);
             if (count == 0)
             {
-                return TextCommandResult.Success("You have no vote rewards to claim.");
+                return TextCommandResult.Success(Lang.Get("canvsserverlist:claim-none"));
             }
 
             for (int i = 0; i < count; i++)
@@ -182,31 +217,37 @@ namespace canvsserverlist.src
                 GiveReward(player);
             }
 
-            return TextCommandResult.Success($"Claimed {count} vote reward(s)! Thank you for voting!");
+            return TextCommandResult.Success(Lang.Get("canvsserverlist:claim-success", count));
         }
 
         private TextCommandResult OnClearRewardsCommand(TextCommandCallingArgs args)
         {
-            config.Rewards = Array.Empty<RewardItem>();
-            api.StoreModConfig(config, "canvsserverlist.json");
-            return TextCommandResult.Success("Vote rewards cleared and saved.");
+            lock (configLock)
+            {
+                var fresh = api.LoadModConfig<ModConfig>("canvsserverlist.json") ?? config;
+                fresh.Rewards = Array.Empty<RewardItem>();
+                api.StoreModConfig(fresh, "canvsserverlist.json");
+                config = fresh;
+                OnConfigChanged?.Invoke(fresh);
+            }
+            return TextCommandResult.Success(Lang.Get("canvsserverlist:clear-success"));
         }
 
         private TextCommandResult OnAddRewardCommand(TextCommandCallingArgs args)
         {
             var player = args.Caller.Player as IServerPlayer;
-            if (player == null) return TextCommandResult.Error("Server-side only.");
+            if (player == null) return TextCommandResult.Error(Lang.Get("canvsserverlist:error-server-only"));
 
             var itemStack = player.InventoryManager.ActiveHotbarSlot?.Itemstack;
             if (itemStack == null)
             {
-                return TextCommandResult.Error("You must hold an item in your hand.");
+                return TextCommandResult.Error(Lang.Get("canvsserverlist:add-no-item"));
             }
 
             int quantity = (int)args.Parsers[0].GetValue();
             if (quantity <= 0)
             {
-                return TextCommandResult.Error("Quantity must be greater than 0.");
+                return TextCommandResult.Error(Lang.Get("canvsserverlist:add-bad-quantity"));
             }
 
             string? attributesBase64 = null;
@@ -235,14 +276,20 @@ namespace canvsserverlist.src
                 Attributes = attributesBase64
             };
 
-            var rewardsList = new List<RewardItem>(config.Rewards ?? Array.Empty<RewardItem>());
-            rewardsList.Add(newReward);
-            config.Rewards = rewardsList.ToArray();
-            api.StoreModConfig(config, "canvsserverlist.json");
+            lock (configLock)
+            {
+                var fresh = api.LoadModConfig<ModConfig>("canvsserverlist.json") ?? config;
+                var rewardsList = new List<RewardItem>(fresh.Rewards ?? Array.Empty<RewardItem>());
+                rewardsList.Add(newReward);
+                fresh.Rewards = rewardsList.ToArray();
+                api.StoreModConfig(fresh, "canvsserverlist.json");
+                config = fresh;
+                OnConfigChanged?.Invoke(fresh);
+            }
 
             return TextCommandResult.Success(
-                $"Added {quantity}x {itemStack.Collectible.Code} to vote rewards." +
-                (attributesBase64 != null ? " (with attributes)" : "")
+                Lang.Get("canvsserverlist:add-success", quantity, itemStack.Collectible.Code) +
+                (attributesBase64 != null ? Lang.Get("canvsserverlist:add-with-attributes") : "")
             );
         }
 
@@ -307,7 +354,7 @@ namespace canvsserverlist.src
             {
                 player.SendMessage(
                     GlobalConstants.GeneralChatGroup,
-                    "Thank you for voting! Here's your reward.",
+                    Lang.Get("canvsserverlist:reward-thanks"),
                     EnumChatType.Notification
                 );
             }

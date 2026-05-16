@@ -1,0 +1,44 @@
+{
+  "canvsserverlist:notify-pending": "У вас {0} награда(д) за голосование!\nВведите /voteclaim чтобы забрать или нажмите ссылку ниже.\n[ <a href=\"chattype:///voteclaim\">ЗАБРАТЬ</a> ]",
+  "canvsserverlist:notify-pending-join": "Вас ждут {0} награда(д) за голосование!\nВведите /voteclaim чтобы забрать или нажмите ссылку ниже.\n[ <a href=\"chattype:///voteclaim\">ЗАБРАТЬ</a> ]",
+  "canvsserverlist:claim-none": "У вас нет наград за голосование.",
+  "canvsserverlist:claim-success": "Получено {0} награда(д) за голосование! Спасибо за голос!",
+  "canvsserverlist:reward-thanks": "Спасибо за голосование! Вот ваша награда.",
+
+  "canvsserverlist:cmd-voteclaim-desc": "Забрать награды за голосование",
+  "canvsserverlist:cmd-clearvoterewards-desc": "Очистить все награды за голосование",
+  "canvsserverlist:cmd-addvotereward-desc": "Добавить предмет из руки как награду за голосование",
+  "canvsserverlist:cmd-vslist-desc": "Команды мода VSServerList",
+  "canvsserverlist:cmd-status-desc": "Показать статус мода",
+  "canvsserverlist:cmd-reload-desc": "Перезагрузить конфигурацию с диска",
+  "canvsserverlist:cmd-testreward-desc": "Выдать тестовую награду игроку",
+
+  "canvsserverlist:clear-success": "Награды за голосование очищены и сохранены.",
+  "canvsserverlist:add-no-item": "Вы должны держать предмет в руке.",
+  "canvsserverlist:add-bad-quantity": "Количество должно быть больше 0.",
+  "canvsserverlist:add-success": "Добавлено {0}x {1} в награды за голосование.",
+  "canvsserverlist:add-with-attributes": " (с атрибутами)",
+
+  "canvsserverlist:status": "[canvsserverlist] Активен. Сервер: {0}\nИнтервал heartbeat: {1}с\nИнтервал опроса голосов: {2}с\nНаграды: {3}\nОжидающие офлайн-награды: {4}",
+  "canvsserverlist:status-rewards-none": "нет",
+
+  "canvsserverlist:reload-fail": "Не удалось загрузить файл конфигурации.",
+  "canvsserverlist:reload-empty-credentials": "ServerUuid или ApiKey пусты в конфигурации. Перезагрузка отменена.",
+  "canvsserverlist:reload-success": "[canvsserverlist] Конфигурация перезагружена. {0}",
+  "canvsserverlist:reload-no-changes": "Изменений не обнаружено",
+  "canvsserverlist:reload-heartbeat": "Heartbeat: {0}с -> {1}с",
+  "canvsserverlist:reload-votepoll": "Опрос голосов: {0}с -> {1}с",
+  "canvsserverlist:reload-rewards": "Награды: {0} -> {1} шт.",
+
+  "canvsserverlist:testreward-not-found": "Игрок '{0}' не найден онлайн.",
+  "canvsserverlist:testreward-success": "Тестовая награда выдана игроку {0}.",
+
+  "canvsserverlist:cmd-simulatevote-desc": "Симулировать голос: положить награду в очередь игроку (работает и для офлайн).",
+  "canvsserverlist:simulatevote-success": "Симулирован голос для '{0}'. Ожидающих наград: {1}.",
+
+  "canvsserverlist:cmd-votestats-desc": "Показать статистику наград за голосование",
+  "canvsserverlist:votestats-all": "[canvsserverlist] Статистика голосований:\nОжидают получения: {0}\nПолучено (за всё время): {1}",
+  "canvsserverlist:votestats-none": "нет",
+
+  "canvsserverlist:error-server-only": "Только серверная команда."
+}

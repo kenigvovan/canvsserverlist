@@ -1,3 +1,44 @@
 {
-    "hello": "hello world!"
+  "canvsserverlist:notify-pending": "You have {0} vote reward(s)!\nUse /voteclaim to claim them or press the link below.\n[ <a href=\"chattype:///voteclaim\">CLAIM</a> ]",
+  "canvsserverlist:notify-pending-join": "You have {0} vote reward(s) waiting!\nUse /voteclaim to claim them or press the link below.\n[ <a href=\"chattype:///voteclaim\">CLAIM</a> ]",
+  "canvsserverlist:claim-none": "You have no vote rewards to claim.",
+  "canvsserverlist:claim-success": "Claimed {0} vote reward(s)! Thank you for voting!",
+  "canvsserverlist:reward-thanks": "Thank you for voting! Here's your reward.",
+
+  "canvsserverlist:cmd-voteclaim-desc": "Claim your vote rewards",
+  "canvsserverlist:cmd-clearvoterewards-desc": "Clear all vote rewards",
+  "canvsserverlist:cmd-addvotereward-desc": "Add item in hand as vote reward",
+  "canvsserverlist:cmd-vslist-desc": "VSServerList mod commands",
+  "canvsserverlist:cmd-status-desc": "Show mod status",
+  "canvsserverlist:cmd-reload-desc": "Reload config from disk",
+  "canvsserverlist:cmd-testreward-desc": "Give a test reward to a player",
+
+  "canvsserverlist:clear-success": "Vote rewards cleared and saved.",
+  "canvsserverlist:add-no-item": "You must hold an item in your hand.",
+  "canvsserverlist:add-bad-quantity": "Quantity must be greater than 0.",
+  "canvsserverlist:add-success": "Added {0}x {1} to vote rewards.",
+  "canvsserverlist:add-with-attributes": " (with attributes)",
+
+  "canvsserverlist:status": "[canvsserverlist] Active. Server: {0}\nHeartbeat interval: {1}s\nVote poll interval: {2}s\nRewards: {3}\nPending offline rewards: {4}",
+  "canvsserverlist:status-rewards-none": "none",
+
+  "canvsserverlist:reload-fail": "Failed to load config file.",
+  "canvsserverlist:reload-empty-credentials": "ServerUuid or ApiKey is empty in config. Reload aborted.",
+  "canvsserverlist:reload-success": "[canvsserverlist] Config reloaded. {0}",
+  "canvsserverlist:reload-no-changes": "No changes detected",
+  "canvsserverlist:reload-heartbeat": "Heartbeat: {0}s -> {1}s",
+  "canvsserverlist:reload-votepoll": "Vote poll: {0}s -> {1}s",
+  "canvsserverlist:reload-rewards": "Rewards: {0} -> {1} items",
+
+  "canvsserverlist:testreward-not-found": "Player '{0}' not found online.",
+  "canvsserverlist:testreward-success": "Test reward given to {0}.",
+
+  "canvsserverlist:cmd-simulatevote-desc": "Simulate a vote: enqueue a reward for the player (works offline).",
+  "canvsserverlist:simulatevote-success": "Simulated vote for '{0}'. Pending rewards: {1}.",
+
+  "canvsserverlist:cmd-votestats-desc": "Show vote reward statistics",
+  "canvsserverlist:votestats-all": "[canvsserverlist] Vote stats:\nPending (unclaimed): {0}\nClaimed (all time): {1}",
+  "canvsserverlist:votestats-none": "none",
+
+  "canvsserverlist:error-server-only": "Server-side only."
 }

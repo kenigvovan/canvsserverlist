@@ -12,13 +12,16 @@ namespace canvsserverlist.src
     public class RewardQueue
     {
         private const string DataKey = "canvsserverlist_pending_rewards";
+        private const string ClaimStatsKey = "canvsserverlist_claim_stats";
         private readonly ICoreServerAPI api;
         private readonly object lockObj = new object();
         private Dictionary<string, int> queue;
+        private Dictionary<string, int> claimStats;
 
         public RewardQueue(ICoreServerAPI api)
         {
             this.api = api;
+
             var raw = api.WorldManager.SaveGame.GetData(DataKey);
             if (raw != null)
             {
@@ -35,6 +38,24 @@ namespace canvsserverlist.src
             else
             {
                 queue = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            var rawStats = api.WorldManager.SaveGame.GetData(ClaimStatsKey);
+            if (rawStats != null)
+            {
+                try
+                {
+                    var deserialized = SerializerUtil.Deserialize<Dictionary<string, int>>(rawStats);
+                    claimStats = new Dictionary<string, int>(deserialized, StringComparer.OrdinalIgnoreCase);
+                }
+                catch
+                {
+                    claimStats = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                }
+            }
+            else
+            {
+                claimStats = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             }
         }
 
@@ -59,7 +80,14 @@ namespace canvsserverlist.src
             {
                 if (!queue.TryGetValue(nickname, out int count)) return 0;
                 queue.Remove(nickname);
+
+                if (claimStats.ContainsKey(nickname))
+                    claimStats[nickname] += count;
+                else
+                    claimStats[nickname] = count;
+
                 Persist();
+                PersistStats();
                 return count;
             }
         }
@@ -85,9 +113,30 @@ namespace canvsserverlist.src
             }
         }
 
+        public Dictionary<string, int> GetAllPending()
+        {
+            lock (lockObj)
+            {
+                return new Dictionary<string, int>(queue, StringComparer.OrdinalIgnoreCase);
+            }
+        }
+
+        public Dictionary<string, int> GetClaimStats()
+        {
+            lock (lockObj)
+            {
+                return new Dictionary<string, int>(claimStats, StringComparer.OrdinalIgnoreCase);
+            }
+        }
+
         private void Persist()
         {
             api.WorldManager.SaveGame.StoreData(DataKey, SerializerUtil.Serialize(queue));
+        }
+
+        private void PersistStats()
+        {
+            api.WorldManager.SaveGame.StoreData(ClaimStatsKey, SerializerUtil.Serialize(claimStats));
         }
     }
 }

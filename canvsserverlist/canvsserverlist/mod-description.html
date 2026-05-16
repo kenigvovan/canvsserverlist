@@ -1,0 +1,105 @@
+<div style="text-align: center; padding: 16px 0; border-bottom: 2px solid #8b6f3a; margin-bottom: 20px;">
+  <h1 style="margin: 0; color: #e0c88a; letter-spacing: 2px;">VSSERVERLIST</h1>
+  <p style="margin: 6px 0 0 0; color: #aaa; font-style: italic;">Server listing integration &amp; vote rewards for Vintage Story</p>
+</div>
+
+<p style="font-size: 1.05em; line-height: 1.5;">Connects your server to <strong>vsserverlist.com</strong> — keeps your listing alive with automatic heartbeats and rewards players who vote for your server. Rewards are queued persistently and survive server restarts; each vote ID is tracked so a reward is never given twice even if the API acknowledgment fails.</p>
+
+<h2 style="color: #e0c88a; border-bottom: 1px solid #555; padding-bottom: 4px;">Features</h2>
+
+<div style="display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0;">
+
+  <div style="flex: 1 1 260px; border-left: 3px solid #c9a84a; padding: 12px 14px; border-radius: 4px;">
+    <h3 style="margin: 0 0 8px 0; color: #e0c88a;">Vote Rewards</h3>
+    <p style="margin: 0; color: #bbb;">Items given when a player votes. Supports any item or block, custom quantities, NBT attributes, and per-class filtering.</p>
+  </div>
+
+  <div style="flex: 1 1 260px; border-left: 3px solid #c9a84a; padding: 12px 14px; border-radius: 4px;">
+    <h3 style="margin: 0 0 8px 0; color: #e0c88a;">Offline Queue</h3>
+    <p style="margin: 0; color: #bbb;">Rewards are saved to the world save file immediately. Players who vote offline are notified on login and can claim at any time.</p>
+  </div>
+
+  <div style="flex: 1 1 260px; border-left: 3px solid #c9a84a; padding: 12px 14px; border-radius: 4px;">
+    <h3 style="margin: 0 0 8px 0; color: #e0c88a;">Fault Tolerant</h3>
+    <p style="margin: 0; color: #bbb;">Automatic exponential backoff when vsserverlist.com is unreachable. Interval resets silently when the connection returns.</p>
+  </div>
+
+  <div style="flex: 1 1 260px; border-left: 3px solid #c9a84a; padding: 12px 14px; border-radius: 4px;">
+    <h3 style="margin: 0 0 8px 0; color: #e0c88a;">Hot Reload</h3>
+    <p style="margin: 0; color: #bbb;">Change rewards, intervals, or credentials at any time with <code>/vslist reload</code> — no server restart needed.</p>
+  </div>
+
+</div>
+
+<h2 style="color: #e0c88a; border-bottom: 1px solid #555; padding-bottom: 4px;">Setup</h2>
+
+<ol style="line-height: 1.8;">
+  <li>Install the mod and start the server once — a default config file <code>canvsserverlist.json</code> will be created.</li>
+  <li>Register your server on <strong>vsserverlist.com</strong> and get your <strong>Server UUID</strong> and <strong>API Key</strong>.</li>
+  <li>Edit <code>canvsserverlist.json</code>:</li>
+</ol>
+
+<pre style="border-left: 3px solid #8b6f3a; padding: 10px 14px; overflow-x: auto;"><code>{
+  "ServerUuid": "your-server-uuid",
+  "ApiKey":     "your-api-key",
+  "ApiUrl":     "https://vsserverlist.com",
+  "HeartbeatIntervalSeconds": 600,
+  "VotePollIntervalSeconds":  60,
+  "Rewards": [
+    {
+      "ItemCode":   "game:gear-rusty",
+      "Quantity":   1,
+      "Attributes": null,
+      "Class":      null
+    }
+  ]
+}</code></pre>
+
+<ol start="4" style="line-height: 1.8;">
+  <li>Restart the server or run <code>/vslist reload</code>.</li>
+</ol>
+
+<h2 style="color: #e0c88a; border-bottom: 1px solid #555; padding-bottom: 4px;">Configuration</h2>
+
+<h3 style="color: #e0c88a;">Config fields</h3>
+<ul style="line-height: 1.7;">
+  <li><strong>ServerUuid</strong> &mdash; your server's UUID from vsserverlist.com</li>
+  <li><strong>ApiKey</strong> &mdash; your API key from vsserverlist.com</li>
+  <li><strong>ApiUrl</strong> &mdash; API endpoint, default <code>https://vsserverlist.com</code></li>
+  <li><strong>HeartbeatIntervalSeconds</strong> &mdash; how often player count is sent to the listing, default <code>600</code></li>
+  <li><strong>VotePollIntervalSeconds</strong> &mdash; how often the mod checks for new votes, default <code>60</code></li>
+  <li><strong>Rewards</strong> &mdash; list of items given for each vote</li>
+</ul>
+
+<h3 style="color: #e0c88a;">Reward item fields</h3>
+<ul style="line-height: 1.7;">
+  <li><strong>ItemCode</strong> &mdash; item or block code, e.g. <code>game:gear-rusty</code>, <code>game:bread-rice</code></li>
+  <li><strong>Quantity</strong> &mdash; how many to give</li>
+  <li><strong>Attributes</strong> &mdash; base64-encoded item attributes (durability, enchantments, etc.). Set automatically via <code>/addvotereward</code> &mdash; do not edit by hand</li>
+  <li><strong>Class</strong> &mdash; character class filter. Only players of this class receive the reward. <code>null</code> = everyone</li>
+</ul>
+
+<h2 style="color: #e0c88a; border-bottom: 1px solid #555; padding-bottom: 4px;">Commands</h2>
+
+<h3 style="color: #e0c88a;">Player commands</h3>
+<ul style="line-height: 1.7; font-family: monospace; list-style: none; padding-left: 0;">
+  <li><strong style="color: #c9a84a;">/voteclaim</strong> &mdash; claim pending vote rewards; items drop at your feet if inventory is full</li>
+</ul>
+
+<h3 style="color: #e0c88a;">Admin commands</h3>
+<ul style="line-height: 1.7; font-family: monospace; list-style: none; padding-left: 0;">
+  <li><strong style="color: #c9a84a;">/vslist status</strong> &mdash; show UUID, heartbeat/poll intervals, configured rewards, and pending offline reward count</li>
+  <li><strong style="color: #c9a84a;">/vslist reload</strong> &mdash; reload config from disk without restarting; prints a summary of what changed</li>
+  <li><strong style="color: #c9a84a;">/vslist testreward &lt;player&gt;</strong> &mdash; give a test reward to an online player to verify your reward config</li>
+  <li><strong style="color: #c9a84a;">/addvotereward &lt;quantity&gt;</strong> &mdash; hold an item and run this command to add it as a vote reward; preserves all item attributes</li>
+  <li><strong style="color: #c9a84a;">/clearvoterewards</strong> &mdash; remove all configured rewards and save</li>
+</ul>
+
+<h2 style="color: #e0c88a; border-bottom: 1px solid #555; padding-bottom: 4px;">How It Works</h2>
+
+<ul style="line-height: 1.6;">
+  <li><strong>Heartbeat</strong> &mdash; every 10 minutes the mod sends the current player count and online names to vsserverlist.com so your listing stays accurate. On repeated failures the interval is automatically doubled (up to 10 minutes) and resets when the connection returns.</li>
+  <li><strong>Vote polling</strong> &mdash; every minute the mod checks for new votes. Each vote ID is stored persistently: if the acknowledgment fails and the backend returns the same vote on the next poll, the reward is not queued a second time.</li>
+  <li><strong>Reward claiming</strong> &mdash; players type <code>/voteclaim</code> to receive their items. Each vote gives the full configured reward set. If the inventory is full, items are dropped at the player's feet.</li>
+  <li><strong>Offline rewards</strong> &mdash; votes are queued immediately to the world save file. A player who votes while offline is notified on login and their rewards are waiting, even after a server restart.</li>
+</ul>
