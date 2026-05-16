@@ -41,7 +41,7 @@ namespace canvsserverlist.src
 
             // Server command: /vslist status
             api.ChatCommands.Create("vslist")
-                .WithDescription("VSServerList mod commands")
+                .WithDescription(Lang.Get("canvsserverlist:cmd-vslist-desc"))
                 .RequiresPrivilege(Privilege.controlserver)
                 .BeginSubCommand("status")
                     .WithDescription("Show mod status")
