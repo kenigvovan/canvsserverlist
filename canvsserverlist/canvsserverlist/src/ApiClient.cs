@@ -27,14 +27,21 @@ namespace canvsserverlist.src
             http.DefaultRequestHeaders.Add("X-Api-Key", newConfig.ApiKey);
         }
 
-        public async Task<bool> SendHeartbeat(int playerCount, List<string> playerNames)
+        public async Task<bool> SendHeartbeat(int playerCount, List<string> playerNames, GameCalendarData? cal = null)
         {
-            var payload = JsonConvert.SerializeObject(new
+            var obj = new Newtonsoft.Json.Linq.JObject
             {
-                player_count = playerCount,
-                online_players = playerNames
-            });
-            var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                ["player_count"]   = playerCount,
+                ["online_players"] = Newtonsoft.Json.Linq.JArray.FromObject(playerNames)
+            };
+            if (cal.HasValue)
+            {
+                obj["game_year"]          = cal.Value.Year;
+                obj["game_day_of_year"]   = cal.Value.DayOfYear;
+                obj["game_days_per_year"] = cal.Value.DaysPerYear;
+                obj["game_season"]        = cal.Value.Season;
+            }
+            var content = new StringContent(obj.ToString(Newtonsoft.Json.Formatting.None), Encoding.UTF8, "application/json");
             var url = $"{config.ApiUrl.TrimEnd('/')}/api/servers/{config.ServerUuid}/heartbeat/";
             var resp = await http.PostAsync(url, content);
             return resp.IsSuccessStatusCode;
@@ -61,6 +68,19 @@ namespace canvsserverlist.src
         public void Dispose()
         {
             http?.Dispose();
+        }
+    }
+
+    public readonly struct GameCalendarData
+    {
+        public readonly int Year;
+        public readonly int DayOfYear;
+        public readonly int DaysPerYear;
+        public readonly string Season;
+
+        public GameCalendarData(int year, int dayOfYear, int daysPerYear, string season)
+        {
+            Year = year; DayOfYear = dayOfYear; DaysPerYear = daysPerYear; Season = season;
         }
     }
 

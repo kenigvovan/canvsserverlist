@@ -18,13 +18,12 @@ namespace canvsserverlist.src
 
         public override void StartServerSide(ICoreServerAPI api)
         {
-            config = api.LoadModConfig<ModConfig>("canvsserverlist.json");
-            if (config == null)
-            {
-                config = new ModConfig();
-                api.StoreModConfig(config, "canvsserverlist.json");
+            bool isNewConfig = !System.IO.File.Exists(
+                System.IO.Path.Combine(api.GetOrCreateDataPath("ModConfig"), "canvsserverlist.json"));
+            config = api.LoadModConfig<ModConfig>("canvsserverlist.json") ?? new ModConfig();
+            api.StoreModConfig(config, "canvsserverlist.json");
+            if (isNewConfig)
                 Mod.Logger.Notification("[canvsserverlist] Default config created. Set ServerUuid and ApiKey to activate.");
-            }
 
             if (string.IsNullOrEmpty(config.ServerUuid) || string.IsNullOrEmpty(config.ApiKey))
             {
@@ -59,13 +58,19 @@ namespace canvsserverlist.src
                         var rewardsList = config.Rewards != null && config.Rewards.Length > 0
                             ? string.Join(", ", System.Array.ConvertAll(config.Rewards, r => $"{r.ItemCode} x{r.Quantity}"))
                             : Lang.Get("canvsserverlist:status-rewards-none");
+                        string maxPerDay = config.MaxRewardsPerDay > 0
+                            ? config.MaxRewardsPerDay.ToString()
+                            : Lang.Get("canvsserverlist:status-unlimited");
                         return TextCommandResult.Success(
                             Lang.Get("canvsserverlist:status",
                                 config.ServerUuid,
                                 config.HeartbeatIntervalSeconds,
                                 config.VotePollIntervalSeconds,
                                 rewardsList,
-                                pending)
+                                pending,
+                                maxPerDay,
+                                config.SendGameCalendar,
+                                config.SendPlayerNames)
                         );
                     })
                 .EndSubCommand()
@@ -92,6 +97,13 @@ namespace canvsserverlist.src
                             int newRewards = newConfig.Rewards?.Length ?? 0;
                             if (oldRewards != newRewards)
                                 changes.Add(Lang.Get("canvsserverlist:reload-rewards", oldRewards, newRewards));
+
+                            if (config.MaxRewardsPerDay != newConfig.MaxRewardsPerDay)
+                                changes.Add(Lang.Get("canvsserverlist:reload-maxperday", config.MaxRewardsPerDay, newConfig.MaxRewardsPerDay));
+                            if (config.SendGameCalendar != newConfig.SendGameCalendar)
+                                changes.Add(Lang.Get("canvsserverlist:reload-sendcalendar", config.SendGameCalendar, newConfig.SendGameCalendar));
+                            if (config.SendPlayerNames != newConfig.SendPlayerNames)
+                                changes.Add(Lang.Get("canvsserverlist:reload-sendplayernames", config.SendPlayerNames, newConfig.SendPlayerNames));
 
                             this.config = newConfig;
                             apiClient?.Reconfigure(newConfig);

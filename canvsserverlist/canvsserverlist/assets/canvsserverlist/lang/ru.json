@@ -1,8 +1,10 @@
 {
-  "canvsserverlist:notify-pending": "У вас {0} награда(д) за голосование!\nВведите /voteclaim чтобы забрать или нажмите ссылку ниже.\n[ <a href=\"chattype:///voteclaim\">ЗАБРАТЬ</a> ]",
-  "canvsserverlist:notify-pending-join": "Вас ждут {0} награда(д) за голосование!\nВведите /voteclaim чтобы забрать или нажмите ссылку ниже.\n[ <a href=\"chattype:///voteclaim\">ЗАБРАТЬ</a> ]",
+  "canvsserverlist:notify-pending": "У вас {0} наград за голосование!\nВведите /voteclaim чтобы забрать или нажмите ссылку ниже.\n[ <a href=\"chattype:///voteclaim\">ЗАБРАТЬ</a> ]",
+  "canvsserverlist:notify-pending-join": "Вас ждут {0} награда за голосование!\nВведите /voteclaim чтобы забрать или нажмите ссылку ниже.\n[ <a href=\"chattype:///voteclaim\">ЗАБРАТЬ</a> ]",
   "canvsserverlist:claim-none": "У вас нет наград за голосование.",
-  "canvsserverlist:claim-success": "Получено {0} награда(д) за голосование! Спасибо за голос!",
+  "canvsserverlist:claim-success": "Получено {0} награда за голосование! Спасибо за голос!",
+  "canvsserverlist:claim-success-partial": "Получено {0} награда за голосование! Спасибо за голос!\nЕщё {1} будут доступны завтра (достигнут дневной лимит).",
+  "canvsserverlist:claim-daily-limit": "Вы уже получили максимум {0} награда за голосование сегодня. Возвращайтесь завтра!",
   "canvsserverlist:reward-thanks": "Спасибо за голосование! Вот ваша награда.",
 
   "canvsserverlist:cmd-voteclaim-desc": "Забрать награды за голосование",
@@ -19,7 +21,8 @@
   "canvsserverlist:add-success": "Добавлено {0}x {1} в награды за голосование.",
   "canvsserverlist:add-with-attributes": " (с атрибутами)",
 
-  "canvsserverlist:status": "[canvsserverlist] Активен. Сервер: {0}\nИнтервал heartbeat: {1}с\nИнтервал опроса голосов: {2}с\nНаграды: {3}\nОжидающие офлайн-награды: {4}",
+  "canvsserverlist:status": "[canvsserverlist] Активен. Сервер: {0}\nИнтервал heartbeat: {1}с\nИнтервал опроса голосов: {2}с\nНаграды: {3}\nОжидающие офлайн-награды: {4}\nМаксимум наград в день: {5}\nОтправлять игровой календарь: {6}\nОтправлять ники игроков: {7}",
+  "canvsserverlist:status-unlimited": "без ограничений",
   "canvsserverlist:status-rewards-none": "нет",
 
   "canvsserverlist:reload-fail": "Не удалось загрузить файл конфигурации.",
@@ -29,6 +32,9 @@
   "canvsserverlist:reload-heartbeat": "Heartbeat: {0}с -> {1}с",
   "canvsserverlist:reload-votepoll": "Опрос голосов: {0}с -> {1}с",
   "canvsserverlist:reload-rewards": "Награды: {0} -> {1} шт.",
+  "canvsserverlist:reload-maxperday": "Макс. наград/день: {0} -> {1}",
+  "canvsserverlist:reload-sendcalendar": "Отправлять игровой календарь: {0} -> {1}",
+  "canvsserverlist:reload-sendplayernames": "Отправлять ники игроков: {0} -> {1}",
 
   "canvsserverlist:testreward-not-found": "Игрок '{0}' не найден онлайн.",
   "canvsserverlist:testreward-success": "Тестовая награда выдана игроку {0}.",

@@ -9,6 +9,16 @@ namespace canvsserverlist.src
         public string ApiUrl { get; set; } = "https://vsserverlist.com";
         public int HeartbeatIntervalSeconds { get; set; } = 600;
         public int VotePollIntervalSeconds { get; set; } = 60;
+
+        public bool SendGameCalendar { get; set; } = true;
+        public bool SendPlayerNames { get; set; } = true;
+
+        /// <summary>
+        /// Maximum number of vote rewards a single player can claim per day (UTC).
+        /// 0 (or less) means unlimited. Rewards exceeding the daily limit stay in the
+        /// queue and become claimable the next day.
+        /// </summary>
+        public int MaxRewardsPerDay { get; set; } = 0;
         public RewardItem[] Rewards { get; set; } = new[] { new RewardItem { ItemCode = "game:gear-rusty", Quantity = 1 } };
     }
 

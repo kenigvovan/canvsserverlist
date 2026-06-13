@@ -206,9 +206,14 @@ namespace canvsserverlist.src
             var player = args.Caller.Player as IServerPlayer;
             if (player == null) return TextCommandResult.Error(Lang.Get("canvsserverlist:error-server-only"));
 
-            int count = queue.Dequeue(player.PlayerName);
+            int maxPerDay = config.MaxRewardsPerDay;
+            int count = queue.Dequeue(player.PlayerName, maxPerDay);
             if (count == 0)
             {
+                // Distinguish "nothing pending" from "daily limit reached".
+                if (maxPerDay > 0 && queue.PendingFor(player.PlayerName) > 0)
+                    return TextCommandResult.Success(Lang.Get("canvsserverlist:claim-daily-limit", maxPerDay));
+
                 return TextCommandResult.Success(Lang.Get("canvsserverlist:claim-none"));
             }
 
@@ -216,6 +221,11 @@ namespace canvsserverlist.src
             {
                 GiveReward(player);
             }
+
+            int leftover = queue.PendingFor(player.PlayerName);
+            if (leftover > 0)
+                return TextCommandResult.Success(
+                    Lang.Get("canvsserverlist:claim-success-partial", count, leftover));
 
             return TextCommandResult.Success(Lang.Get("canvsserverlist:claim-success", count));
         }

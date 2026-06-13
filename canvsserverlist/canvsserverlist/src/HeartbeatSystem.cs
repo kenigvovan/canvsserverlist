@@ -51,13 +51,31 @@ namespace canvsserverlist.src
                 return;
             }
 
+            GameCalendarData? calData = null;
+            if (config.SendGameCalendar)
+            {
+                try
+                {
+                    var cal = api.World.Calendar;
+                    double rel = cal.YearRel;
+                    string season = rel < 0.25 ? "spring"
+                                  : rel < 0.50 ? "summer"
+                                  : rel < 0.75 ? "fall"
+                                  : "winter";
+                    calData = new GameCalendarData(cal.Year, (int)cal.DayOfYear + 1, cal.DaysPerYear, season);
+                }
+                catch { }
+            }
+
+            var playerNames = config.SendPlayerNames ? players : new List<string>();
+
             if (Interlocked.CompareExchange(ref sending, 1, 0) != 0) return;
 
             Task.Run(async () =>
             {
                 try
                 {
-                    bool ok = await client.SendHeartbeat(players.Count, players);
+                    bool ok = await client.SendHeartbeat(players.Count, playerNames, calData);
                     if (ok)
                     {
                         consecutiveFailures = 0;

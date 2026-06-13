@@ -13,10 +13,14 @@ namespace canvsserverlist.src
     {
         private const string DataKey = "canvsserverlist_pending_rewards";
         private const string ClaimStatsKey = "canvsserverlist_claim_stats";
+        private const string DailyClaimsKey = "canvsserverlist_daily_claims";
+        private const string DailyClaimsDayKey = "canvsserverlist_daily_claims_day";
         private readonly ICoreServerAPI api;
         private readonly object lockObj = new object();
         private Dictionary<string, int> queue;
         private Dictionary<string, int> claimStats;
+        private Dictionary<string, int> dailyClaims;
+        private string dailyClaimsDay;
 
         public RewardQueue(ICoreServerAPI api)
         {
@@ -57,6 +61,45 @@ namespace canvsserverlist.src
             {
                 claimStats = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             }
+
+            var rawDaily = api.WorldManager.SaveGame.GetData(DailyClaimsKey);
+            if (rawDaily != null)
+            {
+                try
+                {
+                    var deserialized = SerializerUtil.Deserialize<Dictionary<string, int>>(rawDaily);
+                    dailyClaims = new Dictionary<string, int>(deserialized, StringComparer.OrdinalIgnoreCase);
+                }
+                catch
+                {
+                    dailyClaims = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                }
+            }
+            else
+            {
+                dailyClaims = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            var rawDay = api.WorldManager.SaveGame.GetData(DailyClaimsDayKey);
+            dailyClaimsDay = rawDay != null
+                ? System.Text.Encoding.UTF8.GetString(rawDay)
+                : CurrentDay();
+        }
+
+        private static string CurrentDay() => DateTime.UtcNow.ToString("yyyy-MM-dd");
+
+        /// <summary>
+        /// Resets the per-player daily claim counters when the UTC day changes.
+        /// Must be called while holding lockObj.
+        /// </summary>
+        private void ResetDailyIfNeeded()
+        {
+            string today = CurrentDay();
+            if (dailyClaimsDay == today) return;
+
+            dailyClaimsDay = today;
+            dailyClaims.Clear();
+            PersistDaily();
         }
 
         public void Enqueue(string nickname, int count = 1)
@@ -72,23 +115,48 @@ namespace canvsserverlist.src
         }
 
         /// <summary>
-        /// Returns how many rewards to give, then removes from queue.
+        /// Returns how many rewards to give, then removes that amount from the queue.
+        /// When <paramref name="maxPerDay"/> is greater than 0, the amount returned is
+        /// capped so the player does not exceed that many rewards in a single UTC day;
+        /// any remainder stays in the queue for the following day.
         /// </summary>
-        public int Dequeue(string nickname)
+        public int Dequeue(string nickname, int maxPerDay = 0)
         {
             lock (lockObj)
             {
-                if (!queue.TryGetValue(nickname, out int count)) return 0;
-                queue.Remove(nickname);
+                if (!queue.TryGetValue(nickname, out int count) || count <= 0) return 0;
+
+                int toGive = count;
+                if (maxPerDay > 0)
+                {
+                    ResetDailyIfNeeded();
+                    int claimedToday = dailyClaims.TryGetValue(nickname, out int c) ? c : 0;
+                    int remaining = maxPerDay - claimedToday;
+                    if (remaining <= 0) return 0;
+                    toGive = Math.Min(count, remaining);
+                }
+
+                int rest = count - toGive;
+                if (rest > 0)
+                    queue[nickname] = rest;
+                else
+                    queue.Remove(nickname);
 
                 if (claimStats.ContainsKey(nickname))
-                    claimStats[nickname] += count;
+                    claimStats[nickname] += toGive;
                 else
-                    claimStats[nickname] = count;
+                    claimStats[nickname] = toGive;
 
                 Persist();
                 PersistStats();
-                return count;
+
+                if (maxPerDay > 0)
+                {
+                    dailyClaims[nickname] = (dailyClaims.TryGetValue(nickname, out int d) ? d : 0) + toGive;
+                    PersistDaily();
+                }
+
+                return toGive;
             }
         }
 
@@ -137,6 +205,12 @@ namespace canvsserverlist.src
         private void PersistStats()
         {
             api.WorldManager.SaveGame.StoreData(ClaimStatsKey, SerializerUtil.Serialize(claimStats));
+        }
+
+        private void PersistDaily()
+        {
+            api.WorldManager.SaveGame.StoreData(DailyClaimsKey, SerializerUtil.Serialize(dailyClaims));
+            api.WorldManager.SaveGame.StoreData(DailyClaimsDayKey, System.Text.Encoding.UTF8.GetBytes(dailyClaimsDay));
         }
     }
 }
