@@ -21,7 +21,7 @@
   "canvsserverlist:add-success": "Added {0}x {1} to vote rewards.",
   "canvsserverlist:add-with-attributes": " (with attributes)",
 
-  "canvsserverlist:status": "[canvsserverlist] Active. Server: {0}\nHeartbeat interval: {1}s\nVote poll interval: {2}s\nRewards: {3}\nPending offline rewards: {4}\nMax rewards per day: {5}\nSend game calendar: {6}\nSend player names: {7}",
+  "canvsserverlist:status": "[canvsserverlist] Active. Server: {0}\nHeartbeat interval: {1}s\nVote poll interval: {2}s\nRewards: {3}\nPending offline rewards: {4}\nMax rewards per day: {5}\nSend game calendar: {6}\nSend player names: {7}\nSend mod list: {8}",
   "canvsserverlist:status-unlimited": "unlimited",
   "canvsserverlist:status-rewards-none": "none",
 

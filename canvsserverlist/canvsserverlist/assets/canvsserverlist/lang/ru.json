@@ -21,7 +21,7 @@
   "canvsserverlist:add-success": "Добавлено {0}x {1} в награды за голосование.",
   "canvsserverlist:add-with-attributes": " (с атрибутами)",
 
-  "canvsserverlist:status": "[canvsserverlist] Активен. Сервер: {0}\nИнтервал heartbeat: {1}с\nИнтервал опроса голосов: {2}с\nНаграды: {3}\nОжидающие офлайн-награды: {4}\nМаксимум наград в день: {5}\nОтправлять игровой календарь: {6}\nОтправлять ники игроков: {7}",
+  "canvsserverlist:status": "[canvsserverlist] Активен. Сервер: {0}\nИнтервал heartbeat: {1}с\nИнтервал опроса голосов: {2}с\nНаграды: {3}\nОжидающие офлайн-награды: {4}\nМаксимум наград в день: {5}\nОтправлять игровой календарь: {6}\nОтправлять ники игроков: {7}\nОтправлять список модов: {8}",
   "canvsserverlist:status-unlimited": "без ограничений",
   "canvsserverlist:status-rewards-none": "нет",
 

@@ -14,6 +14,13 @@ namespace canvsserverlist.src
         public bool SendPlayerNames { get; set; } = true;
 
         /// <summary>
+        /// Send the list of installed mods (id, name, version) to the backend once
+        /// at startup. Useful so the backend knows the mod set even for servers that
+        /// are not present in the public master server list.
+        /// </summary>
+        public bool SendModList { get; set; } = false;
+
+        /// <summary>
         /// Maximum number of vote rewards a single player can claim per day (UTC).
         /// 0 (or less) means unlimited. Rewards exceeding the daily limit stay in the
         /// queue and become claimable the next day.

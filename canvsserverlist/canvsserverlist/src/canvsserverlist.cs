@@ -70,7 +70,8 @@ namespace canvsserverlist.src
                                 pending,
                                 maxPerDay,
                                 config.SendGameCalendar,
-                                config.SendPlayerNames)
+                                config.SendPlayerNames,
+                                config.SendModList)
                         );
                     })
                 .EndSubCommand()

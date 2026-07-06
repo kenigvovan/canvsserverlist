@@ -47,6 +47,18 @@ namespace canvsserverlist.src
             return resp.IsSuccessStatusCode;
         }
 
+        public async Task<bool> SendModList(List<ModInfoData> mods)
+        {
+            var payload = JsonConvert.SerializeObject(new
+            {
+                mods = mods.ConvertAll(m => new { mod_id = m.ModId, name = m.Name, version = m.Version })
+            });
+            var content = new StringContent(payload, Encoding.UTF8, "application/json");
+            var url = $"{config.ApiUrl.TrimEnd('/')}/api/servers/{config.ServerUuid}/mods/";
+            var resp = await http.PostAsync(url, content);
+            return resp.IsSuccessStatusCode;
+        }
+
         public async Task<List<PendingVote>> GetPendingVotes()
         {
             var url = $"{config.ApiUrl.TrimEnd('/')}/api/servers/{config.ServerUuid}/pending-votes/";
@@ -81,6 +93,18 @@ namespace canvsserverlist.src
         public GameCalendarData(int year, int dayOfYear, int daysPerYear, string season)
         {
             Year = year; DayOfYear = dayOfYear; DaysPerYear = daysPerYear; Season = season;
+        }
+    }
+
+    public readonly struct ModInfoData
+    {
+        public readonly string ModId;
+        public readonly string Name;
+        public readonly string Version;
+
+        public ModInfoData(string modId, string name, string version)
+        {
+            ModId = modId; Name = name; Version = version;
         }
     }
 

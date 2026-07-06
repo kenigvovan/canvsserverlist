@@ -16,6 +16,8 @@ namespace canvsserverlist.src
         private Timer? timer;
         private int consecutiveFailures;
         private int sending;
+        private List<ModInfoData>? modList;
+        private int modListSent;
 
         public HeartbeatSystem(ICoreServerAPI api, ModConfig config, ApiClient client)
         {
@@ -26,6 +28,16 @@ namespace canvsserverlist.src
 
         public void Start()
         {
+            // Snapshot installed mods once — the mod set does not change at runtime.
+            try
+            {
+                modList = api.ModLoader.Mods
+                    .Where(m => m.Info != null)
+                    .Select(m => new ModInfoData(m.Info.ModID, m.Info.Name, m.Info.Version))
+                    .ToList();
+            }
+            catch { }
+
             int intervalMs = config.HeartbeatIntervalSeconds * 1000;
             // Fire immediately (0 delay), then repeat at interval
             timer = new Timer(_ => FireHeartbeat(), null, 0, intervalMs);
@@ -84,6 +96,24 @@ namespace canvsserverlist.src
                     {
                         OnFailure("non-success status code");
                     }
+
+                    // Send the mod list once the backend acknowledges it. Retried on each
+                    // tick until success, so it survives a server not yet present in the DB.
+                    if (config.SendModList && modListSent == 0 && modList != null)
+                    {
+                        try
+                        {
+                            if (await client.SendModList(modList))
+                            {
+                                Interlocked.Exchange(ref modListSent, 1);
+                                api.Logger.Notification("[canvsserverlist] Mod list sent ({0} mods)", modList.Count);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            api.Logger.Warning("[canvsserverlist] Mod list send failed: {0}", ex.Message);
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -118,6 +148,7 @@ namespace canvsserverlist.src
         {
             config = newConfig;
             consecutiveFailures = 0;
+            Interlocked.Exchange(ref modListSent, 0);
             int intervalMs = newConfig.HeartbeatIntervalSeconds * 1000;
             timer?.Change(intervalMs, intervalMs);
         }
