@@ -9,6 +9,7 @@ namespace canvsserverlist.src
         public string ApiUrl { get; set; } = "https://vsserverlist.com";
         public int HeartbeatIntervalSeconds { get; set; } = 600;
         public int VotePollIntervalSeconds { get; set; } = 60;
+        public int WhitelistPollIntervalSeconds { get; set; } = 60;
 
         public bool SendGameCalendar { get; set; } = true;
         public bool SendPlayerNames { get; set; } = true;

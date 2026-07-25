@@ -21,7 +21,7 @@
   "canvsserverlist:add-success": "Added {0}x {1} to vote rewards.",
   "canvsserverlist:add-with-attributes": " (with attributes)",
 
-  "canvsserverlist:status": "[canvsserverlist] Active. Server: {0}\nHeartbeat interval: {1}s\nVote poll interval: {2}s\nRewards: {3}\nPending offline rewards: {4}\nMax rewards per day: {5}\nSend game calendar: {6}\nSend player names: {7}\nSend mod list: {8}",
+  "canvsserverlist:status": "[canvsserverlist] Active. Server: {0}\nHeartbeat interval: {1}s\nVote poll interval: {2}s\nRewards: {3}\nPending offline rewards: {4}\nMax rewards per day: {5}\nSend game calendar: {6}\nSend player names: {7}\nSend mod list: {8}\nWhitelist poll interval: {9}s",
   "canvsserverlist:status-unlimited": "unlimited",
   "canvsserverlist:status-rewards-none": "none",
 
@@ -31,6 +31,7 @@
   "canvsserverlist:reload-no-changes": "No changes detected",
   "canvsserverlist:reload-heartbeat": "Heartbeat: {0}s -> {1}s",
   "canvsserverlist:reload-votepoll": "Vote poll: {0}s -> {1}s",
+  "canvsserverlist:reload-whitelistpoll": "Whitelist poll: {0}s -> {1}s",
   "canvsserverlist:reload-rewards": "Rewards: {0} -> {1} items",
   "canvsserverlist:reload-maxperday": "Max rewards/day: {0} -> {1}",
   "canvsserverlist:reload-sendcalendar": "Send game calendar: {0} -> {1}",

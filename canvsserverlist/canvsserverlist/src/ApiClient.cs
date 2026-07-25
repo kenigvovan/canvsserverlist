@@ -77,6 +77,33 @@ namespace canvsserverlist.src
             return resp.IsSuccessStatusCode;
         }
 
+        /// <summary>
+        /// Fetch owner-approved whitelist applications.
+        /// Returns null when the server is archived (410) — caller should stop polling.
+        /// Returns an empty list when auto-whitelist is off or nothing is newly approved.
+        /// Throws on other transport/HTTP errors so the caller can back off and retry.
+        /// </summary>
+        public async Task<List<PendingWhitelistEntry>?> GetPendingWhitelist()
+        {
+            var url = $"{config.ApiUrl.TrimEnd('/')}/api/servers/{config.ServerUuid}/whitelist/pending/";
+            var resp = await http.GetAsync(url);
+            if (resp.StatusCode == System.Net.HttpStatusCode.Gone) return null; // 410 — archived
+            if (!resp.IsSuccessStatusCode)
+                throw new HttpRequestException($"whitelist/pending/ returned {(int)resp.StatusCode}");
+            var json = await resp.Content.ReadAsStringAsync();
+            return JsonConvert.DeserializeObject<List<PendingWhitelistEntry>>(json)
+                   ?? new List<PendingWhitelistEntry>();
+        }
+
+        public async Task<bool> AckWhitelist(List<int> appliedIds)
+        {
+            var payload = JsonConvert.SerializeObject(new { applied_ids = appliedIds });
+            var content = new StringContent(payload, Encoding.UTF8, "application/json");
+            var url = $"{config.ApiUrl.TrimEnd('/')}/api/servers/{config.ServerUuid}/whitelist/ack/";
+            var resp = await http.PostAsync(url, content);
+            return resp.IsSuccessStatusCode;
+        }
+
         public void Dispose()
         {
             http?.Dispose();
@@ -118,5 +145,18 @@ namespace canvsserverlist.src
 
         [JsonProperty("voted_at")]
         public string VotedAt { get; set; } = "";
+    }
+
+    public class PendingWhitelistEntry
+    {
+        [JsonProperty("id")]
+        public int Id { get; set; }
+
+        [JsonProperty("player_name")]
+        public string PlayerName { get; set; } = "";
+
+        // May be empty — add by player_name in that case.
+        [JsonProperty("player_uid")]
+        public string PlayerUid { get; set; } = "";
     }
 }

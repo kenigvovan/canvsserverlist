@@ -12,6 +12,7 @@ namespace canvsserverlist.src
         private ApiClient? apiClient;
         private HeartbeatSystem? heartbeat;
         private VoteRewardSystem? voteRewards;
+        private WhitelistSystem? whitelist;
         private readonly object configLock = new object();
 
         public override bool ShouldLoad(EnumAppSide forSide) => forSide == EnumAppSide.Server;
@@ -36,15 +37,18 @@ namespace canvsserverlist.src
             apiClient = new ApiClient(config);
             heartbeat = new HeartbeatSystem(api, config, apiClient);
             voteRewards = new VoteRewardSystem(api, config, apiClient, configLock);
+            whitelist = new WhitelistSystem(api, config, apiClient);
             voteRewards.OnConfigChanged = newConfig =>
             {
                 this.config = newConfig;
                 apiClient?.Reconfigure(newConfig);
                 heartbeat?.Reconfigure(newConfig);
+                whitelist?.Reconfigure(newConfig);
             };
 
             heartbeat.Start();
             voteRewards.Start();
+            whitelist.Start();
 
             // Server command: /vslist
             api.ChatCommands.Create("vslist")
@@ -71,7 +75,8 @@ namespace canvsserverlist.src
                                 maxPerDay,
                                 config.SendGameCalendar,
                                 config.SendPlayerNames,
-                                config.SendModList)
+                                config.SendModList,
+                                config.WhitelistPollIntervalSeconds)
                         );
                     })
                 .EndSubCommand()
@@ -93,6 +98,8 @@ namespace canvsserverlist.src
                                 changes.Add(Lang.Get("canvsserverlist:reload-heartbeat", config.HeartbeatIntervalSeconds, newConfig.HeartbeatIntervalSeconds));
                             if (config.VotePollIntervalSeconds != newConfig.VotePollIntervalSeconds)
                                 changes.Add(Lang.Get("canvsserverlist:reload-votepoll", config.VotePollIntervalSeconds, newConfig.VotePollIntervalSeconds));
+                            if (config.WhitelistPollIntervalSeconds != newConfig.WhitelistPollIntervalSeconds)
+                                changes.Add(Lang.Get("canvsserverlist:reload-whitelistpoll", config.WhitelistPollIntervalSeconds, newConfig.WhitelistPollIntervalSeconds));
 
                             int oldRewards = config.Rewards?.Length ?? 0;
                             int newRewards = newConfig.Rewards?.Length ?? 0;
@@ -110,6 +117,7 @@ namespace canvsserverlist.src
                             apiClient?.Reconfigure(newConfig);
                             heartbeat?.Reconfigure(newConfig);
                             voteRewards?.Reconfigure(newConfig);
+                            whitelist?.Reconfigure(newConfig);
 
                             string summary = changes.Count > 0
                                 ? string.Join(", ", changes)
@@ -195,6 +203,7 @@ namespace canvsserverlist.src
         {
             heartbeat?.Dispose();
             voteRewards?.Dispose();
+            whitelist?.Dispose();
             apiClient?.Dispose();
         }
     }
